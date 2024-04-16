@@ -67,7 +67,7 @@ func redirectStdin() {
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
 
-	logrus.WithField("extension", "xk6-ts").Info("Foobar")
+	logrus.WithField("extension", "xk6-ts").Info("os.Args", os.Args)
 
 	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 
