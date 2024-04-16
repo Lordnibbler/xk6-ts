@@ -84,10 +84,10 @@ func redirectStdin() {
 	os.Stdin = reader
 
 	// like a finally
-	defer func() {
-		os.Stdin = origStdin
-		// reader.Close()
-	}()
+	// defer func() {
+	// 	os.Stdin = origStdin
+	// 	// reader.Close()
+	// }()
 
 	// Start a goroutine to handle the writing to the pipe
 	// go func() {
@@ -97,7 +97,7 @@ func redirectStdin() {
 		logrus.WithError(err).Error("Failed to write JS script to pipe")
 	}
 	// }()
-
+	os.Stdin = origStdin
 	// wg.Wait() // Wait for writing to complete before proceeding
 
 }
