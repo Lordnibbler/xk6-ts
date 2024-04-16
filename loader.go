@@ -2,8 +2,10 @@
 package ts
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -84,36 +86,39 @@ func redirectStdin() {
 
 	os.Args[scriptIndex] = "-"
 
-	_, writer, err := os.Pipe()
+	reader, writer, err := os.Pipe()
 	if err != nil {
 		logrus.WithError(err).Fatal()
 	}
 
-	// var wg sync.WaitGroup
-	// wg.Add(1)
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	// thread/async fn
-	// go func() {
-	// 	defer func() {
-	// 		closeErr := reader.Close()
-	// 		if closeErr != nil {
-	// 			logrus.WithError(closeErr).Error("Failed to close reader")
-	// 		}
-	// 		wg.Done()
-	// 	}()
+	go func() {
+		defer func() {
+			closeErr := reader.Close()
+			if closeErr != nil {
+				logrus.WithError(closeErr).Error("Failed to close reader")
+			}
+			wg.Done()
+		}()
 
-	// 	// Read to EOF to ensure all data is consumed.
-	// 	_, copyErr := io.Copy(os.Stdout, reader)
-	// 	if copyErr != nil {
-	// 		logrus.WithError(copyErr).Error("Failed to read from pipe")
-	// 	}
-	// 	logrus.Info("Reading from pipe completed")
-	// }()
+		// Read to EOF to ensure all data is consumed.
+		_, copyErr := io.Copy(os.Stdin, reader)
+		if copyErr != nil {
+			logrus.WithError(copyErr).Error("Failed to read from pipe")
+		}
+		logrus.Info("Reading from pipe completed")
+	}()
 
-	// defer func() {
-
-	// 	// wg.Wait() // Wait for the reading goroutine to finish
-	// }()
+	defer func() {
+		closeErr := writer.Close()
+		if closeErr != nil {
+			logrus.WithField("extension", "xk6-ts").WithError(closeErr).Fatal("Failed to close writer")
+		}
+		wg.Wait() // Wait for the reading goroutine to finish
+	}()
 
 	logrus.WithField("extension", "xk6-ts").Info("Writing to writer")
 	var bytesWritten int
@@ -121,9 +126,4 @@ func redirectStdin() {
 		logrus.WithField("extension", "xk6-ts").WithError(err).Fatal("Failed to write JS script to pipe")
 	}
 	logrus.WithField("extension", "xk6-ts").Info("Write completed", bytesWritten)
-	closeErr := writer.Close()
-	logrus.WithField("extension", "xk6-ts").Info("Writer closed")
-	if closeErr != nil {
-		logrus.WithField("extension", "xk6-ts").WithError(closeErr).Fatal("Failed to close writer")
-	}
 }
