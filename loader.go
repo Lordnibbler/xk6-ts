@@ -1,8 +1,6 @@
-// Package ts contains xk6-ts extension.
 package ts
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -18,34 +16,19 @@ func init() {
 
 func isRunCommand(args []string) (bool, int) {
 	argn := len(args)
-
-	scriptIndex := argn - 1
-	if scriptIndex < 0 {
-		return false, scriptIndex
-	}
-
-	var runIndex int
-
-	for idx := 0; idx < argn; idx++ {
-		arg := args[idx]
-		if arg == "run" && runIndex == 0 {
-			runIndex = idx
-
-			break
-		}
-	}
-
-	if runIndex == 0 {
+	if argn == 0 {
 		return false, -1
 	}
 
-	return true, scriptIndex
+	for i := 0; i < argn; i++ {
+		if args[i] == "run" && i+1 < argn {
+			return true, i + 1
+		}
+	}
+	return false, -1
 }
 
-//nolint:forbidigo
 func redirectStdin() {
-	logrus.WithField("extension", "xk6-ts").Info("redirectStdin")
-
 	if os.Getenv("XK6_TS") == "false" {
 		return
 	}
@@ -68,6 +51,7 @@ func redirectStdin() {
 	source, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		logrus.WithError(err).Fatal()
+		return
 	}
 
 	packStarted := time.Now()
@@ -75,55 +59,43 @@ func redirectStdin() {
 	jsScript, err := k6pack.Pack(string(source), opts)
 	if err != nil {
 		logrus.WithError(err).Fatal()
+		return
 	}
-
-	logrus.WithField("extension", "xk6-ts").Info("Bundling completed", string(jsScript), len(jsScript))
 
 	if os.Getenv("XK6_TS_BENCHMARK") == "true" {
 		duration := time.Since(packStarted)
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
 
-	os.Args[scriptIndex] = "-"
-
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		logrus.WithError(err).Fatal()
+		return
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// thread/async fn
+	// Start a goroutine to handle the writing to the pipe
 	go func() {
-		defer func() {
-			closeErr := reader.Close()
-			if closeErr != nil {
-				logrus.WithError(closeErr).Error("Failed to close reader")
-			}
-			wg.Done()
-		}()
-
-		// Read to EOF to ensure all data is consumed.
-		_, copyErr := io.Copy(os.Stdin, reader)
-		if copyErr != nil {
-			logrus.WithError(copyErr).Error("Failed to read from pipe")
+		defer wg.Done()
+		defer writer.Close() // Close writer after writing to signal EOF
+		if _, err := writer.Write(jsScript); err != nil {
+			logrus.WithError(err).Error("Failed to write JS script to pipe")
 		}
-		logrus.Info("Reading from pipe completed")
 	}()
 
+	// Replace os.Stdin with the read end of the pipe
+	origStdin := os.Stdin
+	os.Stdin = reader
+
+	// like a finally
 	defer func() {
-		closeErr := writer.Close()
-		if closeErr != nil {
-			logrus.WithField("extension", "xk6-ts").WithError(closeErr).Fatal("Failed to close writer")
-		}
-		wg.Wait() // Wait for the reading goroutine to finish
+		os.Stdin = origStdin
+		reader.Close()
 	}()
 
-	logrus.WithField("extension", "xk6-ts").Info("Writing to writer")
-	var bytesWritten int
-	if bytesWritten, err = writer.Write(jsScript); err != nil {
-		logrus.WithField("extension", "xk6-ts").WithError(err).Fatal("Failed to write JS script to pipe")
-	}
-	logrus.WithField("extension", "xk6-ts").Info("Write completed", bytesWritten)
+	wg.Wait() // Wait for writing to complete before proceeding
+
+	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 }
