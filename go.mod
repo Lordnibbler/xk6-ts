@@ -1,4 +1,4 @@
-module github.com/szkiba/xk6-ts
+module github.com/lordnibbler/xk6-ts
 
 go 1.21
 
@@ -47,3 +47,5 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/guregu/null.v3 v3.3.0 // indirect
 )
+
+replace github.com/szkiba/xk6-ts => github.com/Lordnibbler/xk6-ts v0.0.0-20240416170435-417f109972d9
