@@ -79,6 +79,7 @@ func redirectStdin() {
 		duration := time.Since(packStarted)
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
+	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -107,5 +108,4 @@ func redirectStdin() {
 	}()
 
 	wg.Wait() // Wait for both goroutines to finish
-	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 }
