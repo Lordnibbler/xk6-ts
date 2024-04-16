@@ -87,23 +87,24 @@ func redirectStdin() {
 		logrus.WithError(err).Fatal()
 	}
 
-	defer writer.Close() //nolint:errcheck
-
 	origStdin := os.Stdin
-
-	os.Stdin = reader
-
-	logrus.WithField("extension", "xk6-ts").Info("writer.Write")
-	var bytesWritten int
-	bytesWritten, err = writer.Write(jsScript)
-	logrus.WithField("extension", "xk6-ts").Info("writer.Write completed", bytesWritten)
-	if err != nil {
-		logrus.WithField("extension", "xk6-ts").Info("writer.Close")
-		writer.Close() //nolint:errcheck,gosec
-
+	defer func() {
+		writer.Close() // Ensure the writer is closed on function exit
 		os.Stdin = origStdin
+	}()
 
-		logrus.WithError(err).Fatal()
+	// Start a goroutine to handle non-blocking read.
+	go func() {
+		defer reader.Close() // Close the reader when done
+		// Redirect stdin for the main application.
+		os.Stdin = reader
+	}()
+
+	// Write to the pipe in the main goroutine to ensure all data is written
+	logrus.WithField("extension", "xk6-ts").Info("Writing to writer")
+	bytesWritten, err := writer.Write([]byte(jsScript))
+	if err != nil {
+		logrus.WithField("extension", "xk6-ts").WithError(err).Fatal("Failed to write JS script to pipe")
 	}
-	logrus.WithField("extension", "xk6-ts").Info("complete!")
+	logrus.WithField("extension", "xk6-ts").Info("Write completed", bytesWritten)
 }
