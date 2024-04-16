@@ -2,8 +2,11 @@
 package ts
 
 import (
+	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -87,24 +90,25 @@ func redirectStdin() {
 		logrus.WithError(err).Fatal()
 	}
 
-	origStdin := os.Stdin
-	defer func() {
-		writer.Close() // Ensure the writer is closed on function exit
-		os.Stdin = origStdin
-	}()
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	// Start a goroutine to handle non-blocking read.
 	go func() {
-		defer reader.Close() // Close the reader when done
-		// Redirect stdin for the main application.
-		os.Stdin = reader
+		defer wg.Done()
+		defer reader.Close()
+		if _, err := io.Copy(ioutil.Discard, reader); err != nil {
+			logrus.WithError(err).Error("Failed to read from pipe")
+		}
 	}()
 
-	// Write to the pipe in the main goroutine to ensure all data is written
+	defer func() {
+		writer.Close()
+		wg.Wait() // Wait for the reading goroutine to finish
+	}()
+
 	logrus.WithField("extension", "xk6-ts").Info("Writing to writer")
-	bytesWritten, err := writer.Write([]byte(jsScript))
-	if err != nil {
+	if _, err = writer.Write([]byte(jsScript)); err != nil {
 		logrus.WithField("extension", "xk6-ts").WithError(err).Fatal("Failed to write JS script to pipe")
 	}
-	logrus.WithField("extension", "xk6-ts").Info("Write completed", bytesWritten)
+	logrus.WithField("extension", "xk6-ts").Info("Write completed")
 }
