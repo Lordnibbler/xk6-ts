@@ -77,7 +77,7 @@ func redirectStdin() {
 		logrus.WithError(err).Fatal()
 	}
 
-	logrus.WithField("extension", "xk6-ts").Info("Bundling completed", string(jsScript))
+	logrus.WithField("extension", "xk6-ts").Info("Bundling completed", string(jsScript), len(jsScript))
 
 	if os.Getenv("XK6_TS_BENCHMARK") == "true" {
 		duration := time.Since(packStarted)
@@ -94,17 +94,18 @@ func redirectStdin() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	// thread/async fn
 	go func() {
-		defer wg.Done()
 		defer func() {
 			closeErr := reader.Close()
 			if closeErr != nil {
 				logrus.WithError(closeErr).Error("Failed to close reader")
 			}
+			wg.Done()
 		}()
 
 		// Read to EOF to ensure all data is consumed.
-		_, copyErr := io.Copy(io.Discard, reader)
+		_, copyErr := io.Copy(os.Stdout, reader)
 		if copyErr != nil {
 			logrus.WithError(copyErr).Error("Failed to read from pipe")
 		}
@@ -116,12 +117,13 @@ func redirectStdin() {
 		if closeErr != nil {
 			logrus.WithField("extension", "xk6-ts").WithError(closeErr).Fatal("Failed to close writer")
 		}
-		wg.Wait() // Wait for the reading goroutine to finish
+		// wg.Wait() // Wait for the reading goroutine to finish
 	}()
 
 	logrus.WithField("extension", "xk6-ts").Info("Writing to writer")
-	if _, err = writer.Write(jsScript); err != nil {
+	var bytesWritten int
+	if bytesWritten, err = writer.Write(jsScript); err != nil {
 		logrus.WithField("extension", "xk6-ts").WithError(err).Fatal("Failed to write JS script to pipe")
 	}
-	logrus.WithField("extension", "xk6-ts").Info("Write completed")
+	logrus.WithField("extension", "xk6-ts").Info("Write completed", bytesWritten)
 }
