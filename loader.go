@@ -93,8 +93,10 @@ func redirectStdin() {
 
 	os.Stdin = reader
 
-	logrus.WithField("extension", "xk6-ts").Info("writer.Write", jsScript)
-	_, err = writer.Write(jsScript)
+	logrus.WithField("extension", "xk6-ts").Info("writer.Write")
+	var bytesWritten int
+	bytesWritten, err = writer.Write(jsScript)
+	logrus.WithField("extension", "xk6-ts").Info("writer.Write completed", bytesWritten)
 	if err != nil {
 		logrus.WithField("extension", "xk6-ts").Info("writer.Close")
 		writer.Close() //nolint:errcheck,gosec
