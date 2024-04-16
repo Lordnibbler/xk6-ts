@@ -1,7 +1,7 @@
 package ts
 
 import (
-	"io"
+	// "io"
 	"os"
 	"path/filepath"
 	"sync"
