@@ -78,6 +78,8 @@ func redirectStdin() {
 		logrus.WithError(err).Fatal()
 	}
 
+	logrus.WithField("extension", "xk6-ts").Info("Bundling completed", string(jsScript))
+
 	if os.Getenv("XK6_TS_BENCHMARK") == "true" {
 		duration := time.Since(packStarted)
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
