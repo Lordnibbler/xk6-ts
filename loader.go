@@ -1,8 +1,8 @@
 package ts
 
 import (
-	"os"
 	"io"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -79,7 +79,6 @@ func redirectStdin() {
 		duration := time.Since(packStarted)
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
-	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -101,11 +100,13 @@ func redirectStdin() {
 	// Here we simulate the k6 process by consuming the data from the reader
 	go func() {
 		defer wg.Done()
-		if _, err := io.Copy(os.Stdout, reader); err != nil {
+		if _, err := io.Copy(io.Discard, reader); err != nil {
 			logrus.WithError(err).Error("Failed to read from pipe")
 		}
 		reader.Close()
 	}()
 
 	wg.Wait() // Wait for both goroutines to finish
+	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
+
 }
