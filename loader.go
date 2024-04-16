@@ -67,6 +67,8 @@ func redirectStdin() {
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
 
+	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
+
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		logrus.WithError(err).Fatal()
@@ -80,7 +82,6 @@ func redirectStdin() {
 	go func() {
 		defer wg.Done()
 		defer writer.Close() // Close writer after writing to signal EOF
-		os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 		if _, err := writer.Write(jsScript); err != nil {
 			logrus.WithError(err).Error("Failed to write JS script to pipe")
 		}
