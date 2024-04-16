@@ -1,7 +1,6 @@
 package ts
 
 import (
-	// "io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -17,16 +16,28 @@ func init() {
 
 func isRunCommand(args []string) (bool, int) {
 	argn := len(args)
-	if argn == 0 {
+
+	scriptIndex := argn - 1
+	if scriptIndex < 0 {
+		return false, scriptIndex
+	}
+
+	var runIndex int
+
+	for idx := 0; idx < argn; idx++ {
+		arg := args[idx]
+		if arg == "run" && runIndex == 0 {
+			runIndex = idx
+
+			break
+		}
+	}
+
+	if runIndex == 0 {
 		return false, -1
 	}
 
-	for i := 0; i < argn; i++ {
-		if args[i] == "run" && i+1 < argn {
-			return true, i + 1
-		}
-	}
-	return false, -1
+	return true, scriptIndex
 }
 
 func redirectStdin() {
@@ -65,8 +76,6 @@ func redirectStdin() {
 		duration := time.Since(packStarted)
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
-	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
-
 
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -96,5 +105,5 @@ func redirectStdin() {
 
 	wg.Wait() // Wait for writing to complete before proceeding
 
-	// os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
+	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 }
