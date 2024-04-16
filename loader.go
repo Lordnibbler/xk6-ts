@@ -78,6 +78,11 @@ func redirectStdin() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	// Replace os.Stdin with the read end of the pipe
+	origStdin := os.Stdin
+	os.Stdin = reader
+
+
 	// Start a goroutine to handle the writing to the pipe
 	go func() {
 		defer wg.Done()
@@ -87,9 +92,6 @@ func redirectStdin() {
 		}
 	}()
 
-	// Replace os.Stdin with the read end of the pipe
-	origStdin := os.Stdin
-	os.Stdin = reader
 
 	// like a finally
 	defer func() {
