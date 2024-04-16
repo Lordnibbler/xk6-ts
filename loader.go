@@ -97,7 +97,7 @@ func redirectStdin() {
 		logrus.WithError(err).Error("Failed to write JS script to pipe")
 	}
 	// }()
-	os.Stdin = origStdin
+	// os.Stdin = origStdin
 	// wg.Wait() // Wait for writing to complete before proceeding
 
 }
