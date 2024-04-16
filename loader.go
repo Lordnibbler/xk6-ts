@@ -1,6 +1,7 @@
 package ts
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -64,6 +65,8 @@ func redirectStdin() {
 		duration := time.Since(packStarted)
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
+	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
+
 
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -93,5 +96,5 @@ func redirectStdin() {
 
 	wg.Wait() // Wait for writing to complete before proceeding
 
-	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
+	// os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 }
