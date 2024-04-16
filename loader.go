@@ -77,33 +77,49 @@ func redirectStdin() {
 		logrus.WithField("extension", "xk6-ts").WithField("duration", duration).Info("Bundling completed in ", duration)
 	}
 
+	logrus.WithField("extension", "xk6-ts").Info("Creating pipe")
 	reader, writer, err := os.Pipe()
+	logrus.WithField("extension", "xk6-ts").Info("Created pipe")
 	if err != nil {
 		logrus.WithError(err).Fatal()
 		return
 	}
 
+	logrus.WithField("extension", "xk6-ts").Info("Creating wait group")
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	logrus.WithField("extension", "xk6-ts").Info("starting gorouting")
 	// Start a goroutine to handle the writing to the pipe
 	go func() {
+		logrus.WithField("extension", "xk6-ts").Info("inside goroutine")
 		defer wg.Done()
 		defer writer.Close() // Close writer after writing to signal EOF
+		logrus.WithField("extension", "xk6-ts").Info("writer.Write")
 		if _, err := writer.Write(jsScript); err != nil {
+			logrus.WithField("extension", "xk6-ts").Info("writer.Write errored")
 			logrus.WithError(err).Error("Failed to write JS script to pipe")
 		}
+		logrus.WithField("extension", "xk6-ts").Info("Writer.write completed")
 	}()
 
 	// Replace os.Stdin with the read end of the pipe
+	logrus.WithField("extension", "xk6-ts").Info("replacing stdin")
 	origStdin := os.Stdin
 	os.Stdin = reader
+
 	defer func() {
+		logrus.WithField("extension", "xk6-ts").Info("inside defer/finally")
 		os.Stdin = origStdin
+		logrus.WithField("extension", "xk6-ts").Info("restored stdin")
 		reader.Close()
+		logrus.WithField("extension", "xk6-ts").Info("closed reader")
 	}()
 
+	logrus.WithField("extension", "xk6-ts").Info("wait")
 	wg.Wait() // Wait for writing to complete before proceeding
+	logrus.WithField("extension", "xk6-ts").Info("wait done")
 
 	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
+	logrus.WithField("extension", "xk6-ts").Info("done")
 }
