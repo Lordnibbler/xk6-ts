@@ -80,6 +80,7 @@ func redirectStdin() {
 	go func() {
 		defer wg.Done()
 		defer writer.Close() // Close writer after writing to signal EOF
+		os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 		if _, err := writer.Write(jsScript); err != nil {
 			logrus.WithError(err).Error("Failed to write JS script to pipe")
 		}
@@ -92,10 +93,9 @@ func redirectStdin() {
 	// like a finally
 	defer func() {
 		os.Stdin = origStdin
-		reader.Close()
+		// reader.Close()
 	}()
 
 	wg.Wait() // Wait for writing to complete before proceeding
 
-	os.Args[scriptIndex] = "-" // Set this so k6 reads from stdin
 }
