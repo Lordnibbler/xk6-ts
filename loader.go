@@ -95,9 +95,9 @@ func redirectStdin() {
 	defer writer.Close() // Close writer after writing to signal EOF
 	if _, err := writer.Write(jsScript); err != nil {
 		logrus.WithError(err).Error("Failed to write JS script to pipe")
+		os.Stdin = origStdin
 	}
 	// }()
-	// os.Stdin = origStdin
 	// wg.Wait() // Wait for writing to complete before proceeding
 
 }
