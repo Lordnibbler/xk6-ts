@@ -42,6 +42,8 @@ func isRunCommand(args []string) (bool, int) {
 
 //nolint:forbidigo
 func redirectStdin() {
+	logrus.WithField("extension", "xk6-ts").Info("redirectStdin")
+
 	if os.Getenv("XK6_TS") == "false" {
 		return
 	}
@@ -91,12 +93,15 @@ func redirectStdin() {
 
 	os.Stdin = reader
 
+	logrus.WithField("extension", "xk6-ts").Info("writer.Write", jsScript)
 	_, err = writer.Write(jsScript)
 	if err != nil {
+		logrus.WithField("extension", "xk6-ts").Info("writer.Close")
 		writer.Close() //nolint:errcheck,gosec
 
 		os.Stdin = origStdin
 
 		logrus.WithError(err).Fatal()
 	}
+	logrus.WithField("extension", "xk6-ts").Info("complete!")
 }
