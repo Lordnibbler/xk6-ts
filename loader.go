@@ -89,7 +89,12 @@ func redirectStdin() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	logrus.WithField("extension", "xk6-ts").Info("starting gorouting")
+	// Replace os.Stdin with the read end of the pipe
+	logrus.WithField("extension", "xk6-ts").Info("replacing stdin")
+	origStdin := os.Stdin
+	os.Stdin = reader
+
+	logrus.WithField("extension", "xk6-ts").Info("starting goroutine")
 	// Start a goroutine to handle the writing to the pipe
 	go func() {
 		logrus.WithField("extension", "xk6-ts").Info("inside goroutine")
@@ -103,10 +108,6 @@ func redirectStdin() {
 		logrus.WithField("extension", "xk6-ts").Info("Writer.write completed")
 	}()
 
-	// Replace os.Stdin with the read end of the pipe
-	logrus.WithField("extension", "xk6-ts").Info("replacing stdin")
-	origStdin := os.Stdin
-	os.Stdin = reader
 
 	defer func() {
 		logrus.WithField("extension", "xk6-ts").Info("inside defer/finally")
